@@ -1,8 +1,7 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import AnimatedBackground from './AnimatedBackground';
-import NavBar from './NavBar';
-
+import Navbar from "./Navbar";
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const loc = useLocation();
   const isLogin = loc.pathname === '/login';
