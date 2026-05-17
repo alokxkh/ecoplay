@@ -14,6 +14,52 @@ A quick guide to help new contributors understand how EcoPlay's components fit t
 | Backend / Database | Supabase (PostgreSQL) |
 | Icons | Lucide React |
 
+## System Diagram
+
+```mermaid
+Set-Content -Path docs\ARCHITECTURE.md -Encoding UTF8 -Value @'
+# EcoPlay - Architecture Overview
+
+A quick guide to help new contributors understand how EcoPlay's components fit together.
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | React 18 + TypeScript |
+| Build Tool | Vite 5+ |
+| Styling | Tailwind CSS 3+ |
+| Routing | React Router DOM v7 |
+| Animations | Framer Motion |
+| Backend / Database | Supabase (PostgreSQL) |
+| Icons | Lucide React |
+
+## System Diagram
+
+```mermaid
+flowchart TD
+    User([User / Browser])
+    User -->|HTTPS requests| Frontend
+
+    subgraph Frontend["Frontend (React + Vite)"]
+        App["App.tsx (Routes)"]
+        Pages["Pages: Dashboard, Games, Village, Learn, Events, Community"]
+        Components["Components: Navbar, Layout, AnimatedBackground, EcoChatbot"]
+        Context["Context: AuthContext, GameContext"]
+        App --> Pages
+        App --> Components
+        App --> Context
+    end
+
+    Frontend -->|Supabase JS Client| Supabase
+
+    subgraph Supabase["Backend (Supabase)"]
+        Auth["Auth: Login / Signup"]
+        DB["PostgreSQL: users, scores, villages, posts, events"]
+        Realtime["Realtime: live leaderboards, community"]
+    end
+```
+
 ## Project Structure
 ## src/components/
 
@@ -60,8 +106,4 @@ A quick guide to help new contributors understand how EcoPlay's components fit t
 ## Environment Variables
 
 Copy .env.example to .env and fill in:
-
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-
 For full setup instructions, see the README.
