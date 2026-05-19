@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "../context/GameContext";
 import { TreePine, Droplet, Wind, Flower, Zap, Filter, AlertTriangle } from 'lucide-react';
+import ProjectCardSkeleton from "../components/ProjectCardSkeleton";
 
 interface ShopItem {
   id: string;
@@ -21,6 +22,7 @@ const EcoVillage = () => {
   const { state, dispatch } = useGame();
   const { user, ecoVillage, notifications } = state;
   
+  const [isLoading, setIsLoading] = useState(true);
   const [landscape, setLandscape] = useState<PlacedItem[]>([]);
   const [inventory, setInventory] = useState<string[]>([]);
   const [popup, setPopup] = useState<string | null>(null);
@@ -36,6 +38,11 @@ const EcoVillage = () => {
     { id: 'solar', emoji: "⚡", label: "Solar Panel", cost: 100, category: 'energy' },
     { id: 'filter', emoji: "💧", label: "Water Filter", cost: 75, category: 'water' },
   ];
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (notifications.length > 0) {
@@ -138,31 +145,39 @@ const EcoVillage = () => {
 
       {/* Resource Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
-          <Zap className="h-6 w-6 text-yellow-400 mx-auto mb-1" />
-          <div className="text-xl font-bold text-white">{user.points}</div>
-          <div className="text-xs text-blue-200">Points</div>
-        </div>
-        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
-          <Wind className="h-6 w-6 text-blue-400 mx-auto mb-1" />
-          <div className="text-xl font-bold text-white">{ecoVillage.airQuality}%</div>
-          <div className="text-xs text-blue-200">Air</div>
-        </div>
-        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
-          <Droplet className="h-6 w-6 text-cyan-400 mx-auto mb-1" />
-          <div className="text-xl font-bold text-white">{ecoVillage.waterQuality}%</div>
-          <div className="text-xs text-blue-200">Water</div>
-        </div>
-        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
-          <TreePine className="h-6 w-6 text-green-400 mx-auto mb-1" />
-          <div className="text-xl font-bold text-white">{ecoVillage.biodiversity}%</div>
-          <div className="text-xs text-blue-200">Bio</div>
-        </div>
-        <div className={`bg-white/10 backdrop-blur-lg rounded-xl p-3 border ${ecoVillage.filterHealth < 30 ? 'border-red-500/50' : 'border-white/20'} text-center`}>
-          <Filter className={`h-6 w-6 mx-auto mb-1 ${ecoVillage.filterHealth < 30 ? 'text-red-400' : 'text-cyan-400'}`} />
-          <div className="text-xl font-bold text-white">{ecoVillage.filterHealth}%</div>
-          <div className="text-xs text-blue-200">Filter</div>
-        </div>
+        {isLoading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-20 bg-white/5 rounded-xl border border-white/10 animate-pulse" />
+          ))
+        ) : (
+          <>
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
+              <Zap className="h-6 w-6 text-yellow-400 mx-auto mb-1" />
+              <div className="text-xl font-bold text-white">{user.points}</div>
+              <div className="text-xs text-blue-200">Points</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
+              <Wind className="h-6 w-6 text-blue-400 mx-auto mb-1" />
+              <div className="text-xl font-bold text-white">{ecoVillage.airQuality}%</div>
+              <div className="text-xs text-blue-200">Air</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
+              <Droplet className="h-6 w-6 text-cyan-400 mx-auto mb-1" />
+              <div className="text-xl font-bold text-white">{ecoVillage.waterQuality}%</div>
+              <div className="text-xs text-blue-200">Water</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
+              <TreePine className="h-6 w-6 text-green-400 mx-auto mb-1" />
+              <div className="text-xl font-bold text-white">{ecoVillage.biodiversity}%</div>
+              <div className="text-xs text-blue-200">Bio</div>
+            </div>
+            <div className={`bg-white/10 backdrop-blur-lg rounded-xl p-3 border ${ecoVillage.filterHealth < 30 ? 'border-red-500/50' : 'border-white/20'} text-center`}>
+              <Filter className={`h-6 w-6 mx-auto mb-1 ${ecoVillage.filterHealth < 30 ? 'text-red-400' : 'text-cyan-400'}`} />
+              <div className="text-xl font-bold text-white">{ecoVillage.filterHealth}%</div>
+              <div className="text-xs text-blue-200">Filter</div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* LANDSCAPE */}
@@ -171,105 +186,133 @@ const EcoVillage = () => {
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
-        {/* BACKGROUND */}
-        <div
-          className="absolute inset-0 z-0 pointer-events-none"
-          style={{
-            backgroundImage: "url('/villageback.jpg')",
-            backgroundSize: "cover",
-            backgroundPosition: "center 60%",
-            transform: "scale(1.3)",
-            filter: "brightness(0.9)",
-          }}
-        />
-
-        {/* SKY EMOJIS */}
-        <div className="absolute top-4 left-10 text-6xl z-5 pointer-events-none">☁️</div>
-        <div className="absolute top-8 right-12 text-5xl z-5 pointer-events-none">☁️</div>
-        <div className="absolute top-16 left-1/3 text-4xl z-5 pointer-events-none opacity-70">☁️</div>
-
-        {/* PLACED ITEMS */}
-        <div className="relative z-20 w-full h-full">
-          {landscape.map((item, index) => (
-            <motion.div
-              key={index}
-              initial={{ scale: 0, rotate: -45 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", delay: index * 0.05 }}
-              className="text-6xl absolute cursor-pointer drop-shadow-[0_4px_4px_rgba(0,0,0,0.6)]"
+        {isLoading ? (
+          <div className="absolute inset-0 bg-white/5 animate-pulse" />
+        ) : (
+          <>
+            <div
+              className="absolute inset-0 z-0 pointer-events-none"
               style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
+                backgroundImage: "url('/villageback.jpg')",
+                backgroundSize: "cover",
+                backgroundPosition: "center 60%",
+                transform: "scale(1.3)",
+                filter: "brightness(0.9)",
               }}
-            >
-              {item.emoji}
-            </motion.div>
-          ))}
-        </div>
+            />
+            <div className="absolute top-4 left-10 text-6xl z-5 pointer-events-none">☁️</div>
+            <div className="absolute top-8 right-12 text-5xl z-5 pointer-events-none">☁️</div>
+            <div className="absolute top-16 left-1/3 text-4xl z-5 pointer-events-none opacity-70">☁️</div>
 
-        {/* GRASS FOREGROUND EMOJIS */}
-        <div className="absolute bottom-0 left-0 right-0 h-20 z-30 pointer-events-none flex items-end justify-around text-4xl pb-2">
-          <span>🌿</span>
-          <span>🌾</span>
-          <span>🌱</span>
-          <span>🌿</span>
-          <span>🌾</span>
-          <span>🌱</span>
-          <span>🌿</span>
-        </div>
+            <div className="relative z-20 w-full h-full">
+              {landscape.map((item, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", delay: index * 0.05 }}
+                  className="text-6xl absolute cursor-pointer drop-shadow-[0_4px_4px_rgba(0,0,0,0.6)]"
+                  style={{
+                    left: `${item.x}%`,
+                    top: `${item.y}%`,
+                  }}
+                >
+                  {item.emoji}
+                </motion.div>
+              ))}
+            </div>
 
-        {/* VIGNETTE */}
-        <div
-          className="absolute inset-0 z-40 pointer-events-none"
-          style={{ boxShadow: "inset 0 0 200px rgba(0,0,0,0.35)" }}
-        />
+            <div className="absolute bottom-0 left-0 right-0 h-20 z-30 pointer-events-none flex items-end justify-around text-4xl pb-2">
+              <span>🌿</span>
+              <span>🌾</span>
+              <span>🌱</span>
+              <span>🌿</span>
+              <span>🌾</span>
+              <span>🌱</span>
+              <span>🌿</span>
+            </div>
+            <div
+              className="absolute inset-0 z-40 pointer-events-none"
+              style={{ boxShadow: "inset 0 0 200px rgba(0,0,0,0.35)" }}
+            />
+          </>
+        )}
       </div>
 
       {/* INVENTORY */}
       <h2 className="text-2xl font-semibold mb-3">📦 Inventory (Drag to Village)</h2>
       <div className="flex gap-3 flex-wrap mb-6 min-h-[80px] bg-white/5 rounded-xl p-4 border border-white/10">
-        {inventory.length === 0 && (
+        {isLoading ? (
+          <div className="h-12 bg-white/10 rounded w-1/3 animate-pulse" />
+        ) : inventory.length === 0 ? (
           <p className="text-gray-300">Buy items from the shop to place them in your village!</p>
+        ) : (
+          inventory.map((emoji, i) => (
+            <div
+              key={i}
+              draggable
+              onDragStart={() => handleDragStart(emoji)}
+              className="text-5xl p-3 bg-green-700/40 rounded-xl hover:bg-green-700/60 hover:scale-110 transition-transform cursor-grab active:cursor-grabbing"
+            >
+              {emoji}
+            </div>
+          ))
         )}
-        {inventory.map((emoji, i) => (
-          <div
-            key={i}
-            draggable
-            onDragStart={() => handleDragStart(emoji)}
-            className="text-5xl p-3 bg-green-700/40 rounded-xl hover:bg-green-700/60 hover:scale-110 transition-transform cursor-grab active:cursor-grabbing"
-          >
-            {emoji}
-          </div>
-        ))}
       </div>
 
       {/* SHOP */}
       <h2 className="text-2xl font-semibold mb-3">🛒 Shop</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {shopItems.map((item) => {
-          const canAfford = user.points >= item.cost;
-          return (
-            <motion.button
-              key={item.id}
-              onClick={() => buyItem(item)}
-              disabled={!canAfford}
-              whileHover={{ scale: canAfford ? 1.05 : 1 }}
-              className={`bg-white/10 backdrop-blur-lg p-4 rounded-xl border transition ${
-                canAfford
-                  ? 'border-green-400/50 hover:bg-green-700/30 cursor-pointer'
-                  : 'border-white/10 opacity-50 cursor-not-allowed'
-              }`}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 min-h-[300px]">
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              key="skeletons"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="contents"
             >
-              <div className="text-5xl mb-2">{item.emoji}</div>
-              <div className="text-sm font-semibold">{item.label}</div>
-              <div className={`text-xs mt-1 ${canAfford ? 'text-yellow-300' : 'text-red-300'}`}>
-                {item.cost} points
-              </div>
-            </motion.button>
-          );
-        })}
+              {Array.from({ length: 7 }).map((_, idx) => (
+                <ProjectCardSkeleton key={idx} />
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="shop-content"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="contents"
+            >
+              {shopItems.map((item) => {
+                const canAfford = user.points >= item.cost;
+                return (
+                  <motion.button
+                    key={item.id}
+                    onClick={() => buyItem(item)}
+                    disabled={!canAfford}
+                    whileHover={{ scale: canAfford ? 1.05 : 1 }}
+                    whileTap={{ scale: canAfford ? 0.95 : 1 }}
+                    className={`bg-white/10 backdrop-blur-lg p-4 rounded-xl border transition ${
+                      canAfford
+                        ? 'border-green-400/50 hover:bg-green-700/30 cursor-pointer'
+                        : 'border-white/10 opacity-50 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="text-5xl mb-2">{item.emoji}</div>
+                    <div className="text-sm font-semibold">{item.label}</div>
+                    <div className={`text-xs mt-1 ${canAfford ? 'text-yellow-300' : 'text-red-300'}`}>
+                      {item.cost} points
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-
+      
       {/* POPUP */}
       <AnimatePresence>
         {popup && (

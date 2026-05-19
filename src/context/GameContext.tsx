@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { loadState, saveState } from '../services/persistence';
+import { awardXP } from '../lib/gamification';
 
 // Define your GameState shape (example – adapt to your existing state)
 export interface GameState {
@@ -14,9 +15,9 @@ export interface GameState {
     waterFilters: number;
     pollutionLevel: number;
     wildlife: string[];
-    waterStorage: number; // NEW: water available
-    filterHealth: number; // NEW: 0-100, degrades over time
-    lastUpdated: number; // NEW: timestamp
+    waterStorage: number;
+    filterHealth: number;
+    lastUpdated: number;
   };
   dailyChallenges: {
     id: string;
@@ -30,7 +31,7 @@ export interface GameState {
     totalTrashCollected: number;
     perfectCleanups: number;
   };
-  notifications: string[]; // NEW: login summary
+  notifications: string[];
 }
 
 const initialState: GameState = {
@@ -81,7 +82,7 @@ type GameContextValue = {
 export const GameContext = React.createContext<GameContextValue | undefined>(undefined);
 
 // Simulation constants
-const RAIN_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+const RAIN_INTERVAL_MS = 15 * 60 * 1000;
 const WATER_PER_RAIN = 20;
 const WATER_CONSUMED_PER_TREE_PER_HOUR = 2;
 const POLLUTION_PER_ANIMAL_PER_HOUR = 1.5;
@@ -92,11 +93,10 @@ function simulateTimePassed(state: GameState): { updates: Partial<GameState['eco
   const lastUpdated = state.ecoVillage.lastUpdated || now;
   const elapsed = now - lastUpdated;
   const hoursElapsed = elapsed / (1000 * 60 * 60);
-  
+
   const events: string[] = [];
   const updates: Partial<GameState['ecoVillage']> = { lastUpdated: now };
 
-  // Rain events (every 15 min)
   const rainCycles = Math.floor(elapsed / RAIN_INTERVAL_MS);
   if (rainCycles > 0) {
     const waterAdded = rainCycles * WATER_PER_RAIN;
@@ -104,7 +104,6 @@ function simulateTimePassed(state: GameState): { updates: Partial<GameState['eco
     events.push(`🌧️ It rained ${rainCycles} time(s), adding ${waterAdded} water.`);
   }
 
-  // Trees consume water
   const treesCount = state.ecoVillage.trees || 0;
   if (treesCount > 0) {
     const waterConsumed = Math.floor(treesCount * WATER_CONSUMED_PER_TREE_PER_HOUR * hoursElapsed);
@@ -112,7 +111,6 @@ function simulateTimePassed(state: GameState): { updates: Partial<GameState['eco
     if (waterConsumed > 0) events.push(`🌳 ${treesCount} tree(s) consumed ${waterConsumed} water.`);
   }
 
-  // Animals pollute water
   const animalCount = state.ecoVillage.wildlife?.length || 0;
   if (animalCount > 0) {
     const pollutionAdded = Math.floor(animalCount * POLLUTION_PER_ANIMAL_PER_HOUR * hoursElapsed);
@@ -120,7 +118,6 @@ function simulateTimePassed(state: GameState): { updates: Partial<GameState['eco
     if (pollutionAdded > 0) events.push(`🐾 ${animalCount} animal(s) reduced water quality by ${pollutionAdded}%.`);
   }
 
-  // Filters degrade
   const filterCount = state.ecoVillage.waterFilters || 0;
   if (filterCount > 0) {
     const degradation = Math.floor(FILTER_DEGRADATION_PER_HOUR * hoursElapsed);
@@ -133,7 +130,6 @@ function simulateTimePassed(state: GameState): { updates: Partial<GameState['eco
     }
   }
 
-  // Low water warning
   if ((updates.waterStorage ?? state.ecoVillage.waterStorage) < 20) {
     events.push(`💧 Water storage is critically low!`);
   }
@@ -175,36 +171,47 @@ function reducer(state: GameState, action: any): GameState {
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-
   const [state, dispatchBase] = React.useReducer(reducer, initialState);
 
-  // Hydrate when user changes
   React.useEffect(() => {
     if (!user) return;
     const loaded = loadState(user.id);
     if (loaded) {
       dispatchBase({ type: 'HYDRATE', payload: loaded });
-      // Run simulation on login
       setTimeout(() => dispatchBase({ type: 'SIMULATE_TIME' }), 100);
     } else {
-      // personalize base name
       dispatchBase({ type: 'HYDRATE', payload: { ...initialState, user: { ...initialState.user, name: user.name } } });
     }
   }, [user]);
 
-  // Persist debounced
   React.useEffect(() => {
     if (!user) return;
-    const t = setTimeout(() => {
-      saveState({ userId: user.id, state });
-    }, 300);
+    const t = setTimeout(() => saveState({ userId: user.id, state }), 300);
     return () => clearTimeout(t);
   }, [state, user]);
 
+  // Award login bonus XP once per session
+  React.useEffect(() => {
+    if (!user?.id) return;
+    awardXP(user.id, 'login_bonus').catch((e) => console.error('[XP] login bonus failed:', e));
+  }, [user?.id]);
+
   const dispatch = React.useCallback((action: any) => {
     dispatchBase(action);
-  }, []);
 
+    if (action.type === 'ADD_POINTS') {
+      if (!user?.id) {
+        console.warn('[XP] No user ID — skipping XP award');
+        return;
+      }
+      const activity = action.activityType ?? 'daily_challenge';
+      console.log('[XP] Awarding XP for', activity, 'user:', user.id);
+      awardXP(user.id, activity, action.metadata)
+        .then((result) => console.log('[XP] Award result:', result))
+        .catch((e) => console.error('[XP] Award failed:', e));
+    }
+  }, [user?.id]);
+  
   return (
     <GameContext.Provider value={{ state, dispatch }}>
       {children}
