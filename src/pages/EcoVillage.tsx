@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "../context/GameContext";
-import { TreePine, Droplet, Wind, Zap, Filter, AlertTriangle } from 'lucide-react';
+import { TbBolt, TbWind, TbDroplet, TbLeaf, TbFilter, TbAlertTriangle } from 'react-icons/tb';
 import ProjectCardSkeleton from "../components/ProjectCardSkeleton";
 import Tooltip from "../components/Tooltip";
 
@@ -128,7 +128,7 @@ const EcoVillage = () => {
           >
             <div className="flex items-start justify-between mb-2">
               <h3 className="font-bold text-lg flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
+                <TbAlertTriangle className="h-5 w-5" />
                 Village Update
               </h3>
               <Tooltip content="Dismiss village updates" disableTouchToggle>
@@ -166,36 +166,46 @@ const EcoVillage = () => {
         ) : (
           <>
             <Tooltip content={RESOURCE_TOOLTIPS.points}>
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center cursor-default">
-                <Zap className="h-6 w-6 text-yellow-400 mx-auto mb-1" />
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center w-full h-full flex flex-col items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-yellow-500/15 border border-yellow-500/30 flex items-center justify-center mb-2">
+                  <TbBolt className="h-5 w-5 text-yellow-400" />
+                </div>
                 <div className="text-xl font-bold text-white">{user.points}</div>
                 <div className="text-xs text-blue-200">Points</div>
               </div>
             </Tooltip>
             <Tooltip content={RESOURCE_TOOLTIPS.air}>
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center cursor-default">
-                <Wind className="h-6 w-6 text-blue-400 mx-auto mb-1" />
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center w-full h-full flex flex-col items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center mb-2">
+                  <TbWind className="h-5 w-5 text-sky-300" />
+                </div>
                 <div className="text-xl font-bold text-white">{ecoVillage.airQuality}%</div>
                 <div className="text-xs text-blue-200">Air</div>
               </div>
             </Tooltip>
             <Tooltip content={RESOURCE_TOOLTIPS.water}>
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center cursor-default">
-                <Droplet className="h-6 w-6 text-cyan-400 mx-auto mb-1" />
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center w-full h-full flex flex-col items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center mb-2">
+                  <TbDroplet className="h-5 w-5 text-cyan-300" />
+                </div>
                 <div className="text-xl font-bold text-white">{ecoVillage.waterQuality}%</div>
                 <div className="text-xs text-blue-200">Water</div>
               </div>
             </Tooltip>
             <Tooltip content={RESOURCE_TOOLTIPS.bio}>
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center cursor-default">
-                <TreePine className="h-6 w-6 text-green-400 mx-auto mb-1" />
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center w-full h-full flex flex-col items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-green-500/15 border border-green-500/30 flex items-center justify-center mb-2">
+                  <TbLeaf className="h-5 w-5 text-green-300" />
+                </div>
                 <div className="text-xl font-bold text-white">{ecoVillage.biodiversity}%</div>
                 <div className="text-xs text-blue-200">Bio</div>
               </div>
             </Tooltip>
             <Tooltip content={ecoVillage.filterHealth < 30 ? `${RESOURCE_TOOLTIPS.filter} — needs attention!` : RESOURCE_TOOLTIPS.filter}>
-              <div className={`bg-white/10 backdrop-blur-lg rounded-xl p-3 border ${ecoVillage.filterHealth < 30 ? 'border-red-500/50' : 'border-white/20'} text-center cursor-default`}>
-                <Filter className={`h-6 w-6 mx-auto mb-1 ${ecoVillage.filterHealth < 30 ? 'text-red-400' : 'text-cyan-400'}`} />
+              <div className={`bg-white/10 backdrop-blur-lg rounded-xl p-3 border ${ecoVillage.filterHealth < 30 ? 'border-red-500/50' : 'border-white/20'} text-center w-full h-full flex flex-col items-center justify-center`}>
+                <div className={`w-10 h-10 rounded-lg ${ecoVillage.filterHealth < 30 ? 'bg-red-500/15 border border-red-500/30' : 'bg-cyan-500/15 border border-cyan-500/30'} flex items-center justify-center mb-2`}>
+                  <TbFilter className={`h-5 w-5 ${ecoVillage.filterHealth < 30 ? 'text-red-300' : 'text-cyan-300'}`} />
+                </div>
                 <div className="text-xl font-bold text-white">{ecoVillage.filterHealth}%</div>
                 <div className="text-xs text-blue-200">Filter</div>
               </div>

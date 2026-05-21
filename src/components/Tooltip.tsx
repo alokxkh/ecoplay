@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface TooltipProps {
   content: string;
@@ -20,7 +21,7 @@ function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]) {
   };
 }
 
-const Tooltip: React.FC<TooltipProps> = ({
+export const Tooltip: React.FC<TooltipProps> = ({
   content,
   children,
   side = 'top',
@@ -54,12 +55,10 @@ const Tooltip: React.FC<TooltipProps> = ({
   const handleTouchClick = (e: React.MouseEvent) => {
     if (disableTouchToggle || !window.matchMedia('(hover: none)').matches) return;
     e.stopPropagation();
-    if (visible) {
-      setVisible(false);
-    } else {
-      updatePosition();
-      setVisible(true);
-    }
+    setVisible((prev) => {
+      if (!prev) updatePosition();
+      return !prev;
+    });
   };
 
   useEffect(() => {
@@ -123,30 +122,50 @@ const Tooltip: React.FC<TooltipProps> = ({
     ...(needsTabIndex ? { tabIndex: 0 } : {}),
   });
 
+  const motionProps =
+    side === 'top'
+      ? { initial: { opacity: 0, scale: 0.95, y: 6 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.95, y: 6 } }
+      : { initial: { opacity: 0, scale: 0.95, y: -6 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.95, y: -6 } };
+
   return (
     <>
       {trigger}
-      {visible &&
-        createPortal(
-          <div
-            id={tooltipId}
-            role="tooltip"
-            style={{
-              position: 'fixed',
-              top: coords.top,
-              left: coords.left,
-              transform:
-                side === 'top'
-                  ? 'translate(-50%, -100%)'
-                  : 'translate(-50%, 0)',
-              zIndex: 9999,
-            }}
-            className="pointer-events-none px-3 py-1.5 text-xs sm:text-sm text-white bg-black/85 backdrop-blur-sm rounded-lg border border-white/20 shadow-lg max-w-[220px] text-center whitespace-normal animate-tooltip-in"
-          >
-            {content}
-          </div>,
-          document.body
-        )}
+      {createPortal(
+        <AnimatePresence>
+          {visible && (
+            <motion.div
+              id={tooltipId}
+              role="tooltip"
+              {...motionProps}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              style={{
+                position: 'fixed',
+                top: coords.top,
+                left: coords.left,
+                transform: side === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+                zIndex: 9999,
+              }}
+              className="pointer-events-none px-3.5 py-2.5 text-xs sm:text-sm text-center text-slate-100 bg-slate-950/95 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl max-w-[220px] whitespace-normal"
+            >
+              {content}
+              {/* Arrow */}
+              {side === 'top' && (
+                <div
+                  className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent"
+                  style={{ borderTopColor: 'rgba(2, 6, 23, 0.95)' }}
+                />
+              )}
+              {side === 'bottom' && (
+                <div
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 border-[6px] border-transparent"
+                  style={{ borderBottomColor: 'rgba(2, 6, 23, 0.95)' }}
+                />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 };
