@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React from 'react';
 import { useAuth } from './AuthContext';
 import { loadState, saveState } from '../services/persistence';
 import { awardXP } from '../lib/gamification';
@@ -18,6 +18,8 @@ export interface GameState {
     waterStorage: number;
     filterHealth: number;
     lastUpdated: number;
+    inventory: string[];
+    landscape: { emoji: string; x: number; y: number }[];
   };
   dailyChallenges: {
     id: string;
@@ -47,7 +49,9 @@ const initialState: GameState = {
     wildlife: [],
     waterStorage: 100,
     filterHealth: 100,
-    lastUpdated: Date.now()
+    lastUpdated: Date.now(),
+    inventory: [],
+    landscape: []
   },
   dailyChallenges: [
     {
