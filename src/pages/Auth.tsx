@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Leaf, Mail, Lock, User } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,6 +16,7 @@ const Auth = () => {
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login, register } = useAuth();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -32,75 +33,26 @@ const Auth = () => {
 
     try {
       if (isLogin) {
-        // Login
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (error) throw error;
-
-        if (data.user) {
-          navigate('/');
+        const result = await login(formData.email, formData.password);
+        if (!result.success) {
+          setError(result.error || 'Login failed.');
+          return;
         }
+        navigate('/dashboard');
       } else {
-        // Sign up
         if (formData.password !== formData.confirmPassword) {
-          throw new Error('Passwords do not match');
+          setError('Passwords do not match.');
+          return;
         }
-
-        const { data, error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              name: formData.name,
-            }
-          }
-        });
-
-        if (error) throw error;
-
-        if (data.user) {
-          // Create user profile in database
-          const { error: profileError } = await supabase
-            .from('users')
-            .insert([
-              {
-                id: data.user.id,
-                email: formData.email,
-                name: formData.name,
-                points: 0,
-                level: 1,
-                eco_score: 0
-              }
-            ]);
-
-          if (profileError) throw profileError;
-
-          // Create initial eco village
-          const { error: villageError } = await supabase
-            .from('eco_villages')
-            .insert([
-              {
-                user_id: data.user.id,
-                air_quality: 20,
-                water_quality: 20,
-                biodiversity: 10,
-                trees: 0,
-                solar_panels: 0,
-                water_filters: 0,
-                pollution_level: 80
-              }
-            ]);
-
-          if (villageError) throw villageError;
-
-          navigate('/');
+        const result = await register(formData.name, formData.email, formData.password);
+        if (!result.success) {
+          setError(result.error || 'Registration failed.');
+          return;
         }
+        navigate('/dashboard');
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
