@@ -249,3 +249,13 @@ CREATE POLICY "own_badges"      ON user_badges  FOR ALL USING (auth.uid() = user
 
 -- Leaderboard: everyone can read stats (for rankings), but only owners write
 CREATE POLICY "leaderboard_read" ON user_stats  FOR SELECT USING (true);
+
+-- ─── 7. BINGO PROGRESS ───────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS bingo_progress (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  state JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE bingo_progress ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view own bingo progress" ON bingo_progress FOR SELECT USING (auth.uid() = user_id);
