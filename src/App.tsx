@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import ConfigErrorScreen from './components/status/ConfigErrorScreen';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -11,14 +11,15 @@ import MergePrompt from './components/status/MergePrompt';
 import OfflineBanner from './components/status/OfflineBanner';
 
 import Auth from './pages/Auth';
-import Bingo from './pages/Bingo';
-import Community from './pages/Community';
-import Dashboard from './pages/Dashboard';
-import EcoVillage from './pages/EcoVillage';
-import Events from './pages/Events';
-import LandingPage from './pages/LandingPage';
-import Learn from './pages/Learn';
-import OceanCleanupGame from './pages/OceanCleanupGame';
+
+const Bingo = React.lazy(() => import('./pages/Bingo'));
+const Community = React.lazy(() => import('./pages/Community'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const EcoVillage = React.lazy(() => import('./pages/EcoVillage'));
+const Events = React.lazy(() => import('./pages/Events'));
+const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+const Learn = React.lazy(() => import('./pages/Learn'));
+const OceanCleanupGame = React.lazy(() => import('./pages/OceanCleanupGame'));
 
 /**
  * Protects routes that require authentication.
