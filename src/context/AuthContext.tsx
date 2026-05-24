@@ -146,6 +146,23 @@ export const AuthProvider: React.FC<{
     }
   };
 
+  const forgotPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email.trim().toLowerCase(),
+      {
+        redirectTo: `${window.location.origin}/reset-password`,
+      }
+    );
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+    };
+  };
+
   const logout = async (): Promise<void> => {
     if (user) {
       clearState(user.id);
@@ -162,6 +179,7 @@ export const AuthProvider: React.FC<{
         loading,
         login,
         register,
+        forgotPassword,
         logout,
       }}
     >
