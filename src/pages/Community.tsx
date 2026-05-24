@@ -80,7 +80,24 @@ const Community = () => {
       return next;
     });
 
-    await dbFunctions.updateCommunityPostLikes(id, increment);
+    const success = await dbFunctions.updateCommunityPostLikes(id, increment);
+    if (!success) {
+      // Revert optimistic UI
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === id
+            ? { ...post, likes: post.likes - (increment ? 1 : -1) }
+            : post
+        )
+      );
+      setLikedPosts((prev) => {
+        const next = new Set(prev);
+        if (increment) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      console.error('Failed to update like status');
+    }
   };
 
   const handleShare = async (id: string) => {
@@ -112,7 +129,14 @@ const Community = () => {
     setReplyText('');
     setReplyModal({ open: false });
 
-    await dbFunctions.addCommunityPostReply(postId);
+    const success = await dbFunctions.addCommunityPostReply(postId);
+    if (!success) {
+      // Revert optimistic UI
+      setPosts((prev) =>
+        prev.map((post) => (post.id === postId ? { ...post, replies: post.replies - 1 } : post))
+      );
+      console.error('Failed to submit reply');
+    }
   };
 
   const handleSubmitPost = async (e: React.FormEvent) => {
