@@ -1,8 +1,6 @@
 /**
  * EcoPlay Gamification Engine
- * Issue #4 – XP calculation, streak management, badge logic
- *
- * Formula: Final XP = ROUND(base_xp × difficulty_weight × streak_multiplier)
+ * Improved error handling + consistency protection
  */
 
 import { supabase } from './supabase';
@@ -58,8 +56,6 @@ export interface LeaderboardEntry {
 }
 
 // ─── Streak Multiplier ────────────────────────────────────────
-// Mirrors the GENERATED ALWAYS AS expression in SQL exactly.
-// Used client-side for optimistic UI updates.
 
 export function computeStreakMultiplier(currentStreak: number): number {
   if (currentStreak >= 30) return 3;
@@ -71,12 +67,6 @@ export function computeStreakMultiplier(currentStreak: number): number {
 
 // ─── XP Award ────────────────────────────────────────────────
 
-/**
- * Awards XP for a completed activity.
- * Reads base_xp + difficulty_weight from xp_config,
- * reads streak_multiplier from user_streaks,
- * inserts into xp_ledger (triggers handle user_stats + streak update).
- */
 export async function awardXP(
   userId: string,
   activityType: ActivityType,
@@ -133,10 +123,6 @@ export async function awardXP(
 
 // ─── Badge Engine ─────────────────────────────────────────────
 
-/**
- * Evaluates badge unlock conditions after an activity.
- * Returns keys of newly awarded badges.
- */
 async function checkAndAwardBadges(
   userId: string,
   _activityType: ActivityType,
@@ -190,37 +176,24 @@ async function checkAndAwardBadges(
     }
   }
 
-  if (candidates.length === 0) return [];
+  try {
 
   // Batch-insert newly earned badges securely via RPC
   const { error } = await supabase.rpc('award_badges_secure', {
     p_badge_keys: candidates
   });
 
-  if (error) console.error('[EcoPlay] Badge insert error:', error);
+    if (error) {
 
-  return candidates;
-}
+      console.error(
+        '[EcoPlay] getUserBadges failed:',
+        error
+      );
 
-// ─── Stats Fetchers ───────────────────────────────────────────
+      return [];
+    }
 
-export async function getUserStats(userId: string): Promise<UserStats | null> {
-  const { data, error } = await supabase
-    .from('user_stats')
-    .select('user_id, total_xp, current_level, xp_to_next_level, activities_count')
-    .eq('user_id', userId)
-    .single();
-
-  if (error || !data) return null;
-
-  return {
-    userId:          data.user_id,
-    totalXP:         data.total_xp,
-    currentLevel:    data.current_level,
-    xpToNextLevel:   data.xp_to_next_level,
-    activitiesCount: data.activities_count,
-  };
-}
+    return data ?? [];
 
 export async function getUserStreak(userId: string): Promise<UserStreak> {
   const { data } = await supabase
@@ -237,13 +210,11 @@ export async function getUserStreak(userId: string): Promise<UserStreak> {
   };
 }
 
-export async function getUserBadges(userId: string) {
-  const { data, error } = await supabase
-    .from('user_badges')
-    .select('badge_key, earned_at, badges(name, description, icon)')
-    .eq('user_id', userId)
-    .order('earned_at', { ascending: false });
+    console.error(
+      '[EcoPlay] getUserBadges crashed:',
+      error
+    );
 
-  if (error) throw error;
-  return data ?? [];
+    return [];
+  }
 }
