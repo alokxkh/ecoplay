@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import {
+  isSupabaseConfigured,
+  supabase,
+  supabaseConfigError,
+} from "../lib/supabase";
 import type { AuthContextType, AuthResponse, User } from "../types/auth";
 import { clearState } from "../services/persistence";
 
@@ -21,6 +25,35 @@ function toAppUser(supabaseUser: any): User {
   };
 }
 
+const authSetupMessage =
+  supabaseConfigError ||
+  "Authentication is not configured. Add your Supabase credentials to .env.";
+
+function getAuthErrorMessage(error: unknown, fallback: string): string {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error && "message" in error
+      ? String((error as { message?: unknown }).message)
+      : "";
+
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    normalizedMessage.includes("failed to fetch") ||
+    normalizedMessage.includes("networkerror") ||
+    normalizedMessage.includes("load failed")
+  ) {
+    return "Unable to reach the authentication server. Check your internet connection and Supabase project URL.";
+  }
+
+  if (normalizedMessage.includes("invalid login credentials")) {
+    return "Incorrect email or password.";
+  }
+
+  return message || fallback;
+}
+
 export const AuthProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
@@ -28,11 +61,25 @@ export const AuthProvider: React.FC<{
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restore existing session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ? toAppUser(session.user) : null);
+    if (!isSupabaseConfigured) {
+      setUser(null);
       setLoading(false);
-    });
+      return;
+    }
+
+    // Restore existing session on mount
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setUser(session?.user ? toAppUser(session.user) : null);
+      })
+      .catch((error) => {
+        console.error("[Auth] Session restore failed:", error);
+        setUser(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
     // Keep state in sync with Supabase session events
     const {
@@ -56,6 +103,13 @@ export const AuthProvider: React.FC<{
     email: string,
     password: string
   ): Promise<AuthResponse> => {
+    if (!isSupabaseConfigured) {
+      return {
+        success: false,
+        error: authSetupMessage,
+      };
+    }
+
     try {
       // Step 1: Create authentication account
       const { data, error } = await supabase.auth.signUp({
@@ -67,22 +121,16 @@ export const AuthProvider: React.FC<{
       });
 
       if (error) {
-        const message = error.message.toLowerCase();
-
-        if (message.includes("failed to fetch")) {
-          return {
-            success: false,
-            error: "Unable to connect to authentication server.",
-          };
-        }
-
-        return { success: false, error: error.message };
+        return {
+          success: false,
+          error: getAuthErrorMessage(error, "Registration failed."),
+        };
       }
 
       if (!data.user) {
         return {
           success: false,
-          error: "Registration failed — please try again.",
+          error: "Registration failed - please try again.",
         };
       }
 
@@ -100,14 +148,14 @@ export const AuthProvider: React.FC<{
 
       // Properly handle profile creation failure
       if (profileError) {
-        console.error(
-          "[Auth] Profile insert failed:",
-          profileError.message
-        );
+        console.error("[Auth] Profile insert failed:", profileError.message);
 
         return {
           success: false,
-          error: "Failed to create user profile.",
+          error: getAuthErrorMessage(
+            profileError,
+            "Failed to create user profile."
+          ),
         };
       }
 
@@ -135,14 +183,14 @@ export const AuthProvider: React.FC<{
         );
 
         // Rollback user profile creation
-        await supabase
-          .from("users")
-          .delete()
-          .eq("id", data.user.id);
+        await supabase.from("users").delete().eq("id", data.user.id);
 
         return {
           success: false,
-          error: "Failed to initialize eco village.",
+          error: getAuthErrorMessage(
+            villageError,
+            "Failed to initialize eco village."
+          ),
         };
       }
 
@@ -156,7 +204,10 @@ export const AuthProvider: React.FC<{
 
       return {
         success: false,
-        error: "An unexpected error occurred.",
+        error: getAuthErrorMessage(
+          err,
+          "An unexpected registration error occurred."
+        ),
       };
     }
   };
@@ -165,6 +216,13 @@ export const AuthProvider: React.FC<{
     email: string,
     password: string
   ): Promise<AuthResponse> => {
+    if (!isSupabaseConfigured) {
+      return {
+        success: false,
+        error: authSetupMessage,
+      };
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
@@ -172,29 +230,16 @@ export const AuthProvider: React.FC<{
       });
 
       if (error) {
-        const message = error.message.toLowerCase();
-
-        if (message.includes("invalid login credentials")) {
-          return {
-            success: false,
-            error: "Incorrect email or password.",
-          };
-        }
-
-        if (message.includes("failed to fetch")) {
-          return {
-            success: false,
-            error: "Unable to connect to authentication server.",
-          };
-        }
-
-        return { success: false, error: error.message };
+        return {
+          success: false,
+          error: getAuthErrorMessage(error, "Login failed."),
+        };
       }
 
       if (!data.user) {
         return {
           success: false,
-          error: "Login failed — please try again.",
+          error: "Login failed - please try again.",
         };
       }
 
@@ -207,26 +252,45 @@ export const AuthProvider: React.FC<{
 
       return {
         success: false,
-        error: "An unexpected error occurred.",
+        error: getAuthErrorMessage(err, "An unexpected login error occurred."),
       };
     }
   };
 
   const forgotPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(
-      email.trim().toLowerCase(),
-      {
-        redirectTo: `${window.location.origin}/reset-password`,
-      }
-    );
-
-    if (error) {
-      return { success: false, error: error.message };
+    if (!isSupabaseConfigured) {
+      return {
+        success: false,
+        error: authSetupMessage,
+      };
     }
 
-    return {
-      success: true,
-    };
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        {
+          redirectTo: `${window.location.origin}/reset-password`,
+        }
+      );
+
+      if (error) {
+        return {
+          success: false,
+          error: getAuthErrorMessage(error, "Failed to send reset email."),
+        };
+      }
+
+      return {
+        success: true,
+      };
+    } catch (err: any) {
+      console.error("[Auth] Forgot password error:", err);
+
+      return {
+        success: false,
+        error: getAuthErrorMessage(err, "Failed to send reset email."),
+      };
+    }
   };
 
   const logout = async (): Promise<void> => {
@@ -234,7 +298,9 @@ export const AuthProvider: React.FC<{
       clearState(user.id);
     }
 
-    await supabase.auth.signOut();
+    if (isSupabaseConfigured) {
+      await supabase.auth.signOut();
+    }
 
     setUser(null);
   };
