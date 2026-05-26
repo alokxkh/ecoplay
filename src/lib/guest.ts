@@ -41,3 +41,15 @@ export function clearGuestState(): void {
     // ignore storage failures
   }
 }
+export function getGuestId(): string {
+  try {
+    const existing = localStorage.getItem('ecoplay.guest_id');
+    if (existing) return existing;
+    const id = `guest-${crypto.randomUUID()}`;
+    localStorage.setItem('ecoplay.guest_id', id);
+    return id;
+  } catch {
+    return 'guest-local';
+  }
+}
+
