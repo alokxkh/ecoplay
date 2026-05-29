@@ -14,6 +14,7 @@ import {
   hasGuestState,
   isGuestMode,
 } from "../lib/guest";
+import { getAuthErrorMessage } from "../lib/authErrors";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -39,31 +40,6 @@ function toAppUser(supabaseUser: any): User {
 const authSetupMessage =
   supabaseConfigError ||
   "Authentication is not configured. Add your Supabase credentials to .env.";
-
-function getAuthErrorMessage(error: unknown, fallback: string): string {
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === "object" && error && "message" in error
-      ? String((error as { message?: unknown }).message)
-      : "";
-
-  const normalizedMessage = message.toLowerCase();
-
-  if (
-    normalizedMessage.includes("failed to fetch") ||
-    normalizedMessage.includes("networkerror") ||
-    normalizedMessage.includes("load failed")
-  ) {
-    return "Unable to reach the authentication server. Check your internet connection and Supabase project URL.";
-  }
-
-  if (normalizedMessage.includes("invalid login credentials")) {
-    return "Incorrect email or password.";
-  }
-
-  return message || fallback;
-}
 
 export const AuthProvider: React.FC<{
   children: React.ReactNode;
@@ -264,7 +240,7 @@ export const AuthProvider: React.FC<{
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
         {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: window.location.origin,
         }
       );
 

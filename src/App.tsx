@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import ConfigErrorScreen from './components/status/ConfigErrorScreen';
 import { AuthProvider, useAuth } from './context/AuthContext';
